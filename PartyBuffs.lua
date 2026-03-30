@@ -26,7 +26,7 @@
 
 addon.name      = 'PartyBuffs';
 addon.author    = 'Bag_Town';
-addon.version   = '1.4';
+addon.version   = '1.5';
 addon.desc      = 'Displays a distance and list of icons of current status buffs and ailments next to the party list. Based on Project Tako\'s version.';
 addon.link      = 'https://ashitaxi.com/';
 
@@ -73,6 +73,7 @@ local default_settings = T{
 
     status_effects = statusEffects;
     show_excluded = T{ false },
+    show_self = T{ true },
 };
 
 local party_buffs = T{
@@ -88,6 +89,7 @@ local party_buffs = T{
     maxrange = T{ 22.0 },
 
     party_member_data = T{
+        T{ member = 0, id = nil, statuses = { }, distance = nil, },
         T{ member = 1, id = nil, statuses = { }, distance = nil, },
         T{ member = 2, id = nil, statuses = { }, distance = nil, },
         T{ member = 3, id = nil, statuses = { }, distance = nil, },
@@ -168,27 +170,6 @@ local function print_help(isError)
     end);
 end
 
---DEBUGGING Remove later
-local function print_settings()
-    print("Settings, Distance_Visible: " .. tostring(not not party_buffs.settings.distance_visible[1]));
-    print("Settings, Status_Visible: " .. tostring(not not party_buffs.settings.status_visible[1]));
-    print("Settings, Opacity: " .. tostring(party_buffs.settings.opacity[1]));
-    print("Settings, Size: " .. tostring(party_buffs.settings.size[1]));
-    print("Settings, Distance Scale: " .. tostring(party_buffs.settings.distance_scale[1]));
-    print("Settings, Status Scale: " .. tostring(party_buffs.settings.status_scale[1]));
-    print("Settings, X: " .. tostring(party_buffs.settings.x[1]));
-    print("Settings, Y: " .. tostring(party_buffs.settings.y[1]));
-    print("Settings, Show_Excluded: " .. tostring(not not party_buffs.settings.show_excluded[1]));
-    print("Settings, Editor.isOpen: " .. tostring(not not config.uiSettings.is_open[1]));
-
-    party_buffs.party_member_data:each(function (pmd) 
-        print('PMD Member: ' .. tostring(pmd.member));
-        print('PMD ID: ' .. tostring(pmd.id));
-        for key, value in pairs(pmd.statuses) do
-            print('Member: ' .. tostring(pmd.member) .. ' Status ID: ' .. tostring(value));
-        end
-    end);
-end
 
 --[[
 * Render the party member distance font text.
@@ -197,9 +178,9 @@ end
 * @param {int} offset - X offset for the rendering.
 --]]
 local function render_party_distance(party_member_data, offset)
-    if(party_buffs.settings.distance_visible[1]) then
+    if(party_buffs.settings.distance_visible[1] and party_member_data.distance.visible) then
         local distance = AshitaCore:GetMemoryManager():GetEntity():GetDistance(AshitaCore:GetMemoryManager():GetParty():GetMemberTargetIndex(party_member_data.member));
-       
+    
         -- Change color based on range of the party member
         local text_color = party_buffs.settings.distance_font.color;
         if( math.sqrt(distance) > party_buffs.subrange[1] ) then
@@ -215,7 +196,6 @@ local function render_party_distance(party_member_data, offset)
         party_member_data.distance.text = string.format('%.1f', math.sqrt(distance));
         party_member_data.distance.visible = true;
         party_member_data.distance:render();
-        
     else
         party_member_data.distance.visible = false;
     end
@@ -253,6 +233,32 @@ end
 --[[   ------------------------   ]]--
 --[[   EVENT REGISTER FUNCTIONS   ]]-- 
 --[[   ------------------------   ]]--
+
+
+
+--DEBUGGING Remove later
+local function print_settings()
+    print("Settings, Distance_Visible: " .. tostring(not not party_buffs.settings.distance_visible[1]));
+    print("Settings, Status_Visible: " .. tostring(not not party_buffs.settings.status_visible[1]));
+    print("Settings, Opacity: " .. tostring(party_buffs.settings.opacity[1]));
+    print("Settings, Size: " .. tostring(party_buffs.settings.size[1]));
+    print("Settings, Distance Scale: " .. tostring(party_buffs.settings.distance_scale[1]));
+    print("Settings, Status Scale: " .. tostring(party_buffs.settings.status_scale[1]));
+    print("Settings, X: " .. tostring(party_buffs.settings.x[1]));
+    print("Settings, Y: " .. tostring(party_buffs.settings.y[1]));
+    print("Settings, Show_Excluded: " .. tostring(not not party_buffs.settings.show_excluded[1]));
+    print("Settings, Show_Self: " .. tostring(not not party_buffs.settings.show_self[1]));
+    print("Settings, Editor.isOpen: " .. tostring(not not config.uiSettings.is_open[1]));
+
+    party_buffs.party_member_data:each(function (pmd) 
+        print('PMD Member: ' .. tostring(pmd.member));
+        print('PMD ID: ' .. tostring(pmd.id));
+        for key, value in pairs(pmd.statuses) do
+            print('Member: ' .. tostring(pmd.member) .. ' Status ID: ' .. tostring(value));
+        end
+    end);
+end
+
 
 --[[
 * event: command
@@ -328,8 +334,12 @@ ashita.events.register('command', 'command_cb', function(e)
             return;
         end
 
-         -- Handle: /partybuffs reset OR /pb reset - Resets the current settings.
-         if (#args >= 2 and args[2]:any('printsettings')) then
+         
+        
+
+
+
+         if (#args >= 2 and args[2]:any('ps')) then
             print_settings();
             return;
         end
@@ -360,29 +370,44 @@ ashita.events.register('d3d_present', 'present_cb', function()
     end
 
     local player_zone = AshitaCore:GetMemoryManager():GetParty():GetMemberZone(0);
+    local playerIcons = AshitaCore:GetMemoryManager():GetPlayer():GetStatusIcons();
+    local pmd = party_buffs.party_member_data
+    
+    party_buffs.sprite:Begin();
 
-    if (AshitaCore:GetMemoryManager():GetParty():GetAlliancePartyMemberCount1() > 1) then
-        party_buffs.sprite:Begin();
-        
-        party_buffs.party_member_data:each(function (pmd)
-            local xoffset = 0;
-
-            if(pmd.id ~= 0 and pmd.id ~= nil) then
-                if (player_zone ~= AshitaCore:GetMemoryManager():GetParty():GetMemberZone(pmd.member) or AshitaCore:GetMemoryManager():GetParty():GetMemberIsActive(pmd.member) == 0) then
-                    pmd.distance.visible = false;
-                else
-                    render_party_distance(pmd, xoffset);
-                    if(party_buffs.settings.distance_visible[1]) then
-                        xoffset = xoffset + (2 * math.ceil((party_buffs.settings.distance_scale[1] * party_buffs.settings.size[1]))) + party_buffs.settings.text_padding[1];
-                    end
-                    render_party_sprites(pmd, xoffset);
-                end
+    -- If self display is on, render own buffs.
+    if (party_buffs.settings.show_self[1]) then
+        for i = 1,32,1 do
+            if (playerIcons[i] ~= 255 and playerIcons[i] > 0) then
+                pmd[1].statuses[i] = playerIcons[i];
             end
-
-        end);
-
-        party_buffs.sprite:End();
+        end
+        pmd[1].distance.visible = true;
+    else 
+        pmd[1].statuses = {};
+        pmd[1].distance.visible = false; 
     end
+    
+
+    -- Render the rest of the party's buffs.
+    party_buffs.party_member_data:each(function (pmd)
+        local xoffset = 0;
+
+        if(pmd.id ~= 0 and pmd.id ~= nil) then
+            if (player_zone ~= AshitaCore:GetMemoryManager():GetParty():GetMemberZone(pmd.member) or AshitaCore:GetMemoryManager():GetParty():GetMemberIsActive(pmd.member) == 0) then
+                pmd.distance.visible = false;
+            else
+                render_party_distance(pmd, xoffset);
+                if(party_buffs.settings.distance_visible[1]) then
+                    xoffset = xoffset + (2 * math.ceil((party_buffs.settings.distance_scale[1] * party_buffs.settings.size[1]))) + party_buffs.settings.text_padding[1];
+                end
+                render_party_sprites(pmd, xoffset);
+            end
+        end
+    end);
+
+
+    party_buffs.sprite:End();
 
     config.render_editor(party_buffs.settings, party_buffs.party_member_data, party_buffs.subrange, party_buffs.subcolor, party_buffs.maxrange, party_buffs.maxcolor);
     
@@ -415,7 +440,7 @@ ashita.events.register('load', 'load_cb', function()
     party_buffs.party_member_data:each( function(pmd)
         pmd.distance = fonts.new(party_buffs.settings.distance_font);
         local server_id = AshitaCore:GetMemoryManager():GetParty():GetMemberServerId(pmd.member);
-        if(server_id ~= 0) then
+        if(server_id >= 0) then
             pmd.id = server_id;
             pmd.distance.visible = true;
         end
@@ -431,29 +456,27 @@ ashita.events.register('packet_in', 'packet_in_cb', function(e)
 	if (e.id == 0x0A) then
         party_buffs.party_member_data:each( function(pmd)
             local server_id = AshitaCore:GetMemoryManager():GetParty():GetMemberServerId(pmd.member);
-            if(server_id ~= 0) then
+            if(server_id >= 0) then
                 pmd.id = server_id;
                 pmd.statuses = { };
             end
         end);
         
-    -- Party update packet
+    -- Party member update packet
 	elseif (e.id == 0xDD) then
         party_buffs.party_member_data:each( function(pmd)
             -- Party member either added or removed. Reset IDs and pull new data
             pmd.id = 0;
             local server_id = AshitaCore:GetMemoryManager():GetParty():GetMemberServerId(pmd.member);
-			if (server_id ~= 0) then
+			if (server_id >= 0) then
                 pmd.id = server_id;
-                --pmd.statuses = { }; FIXME IF NEEDED
             end
         end);
 
-    -- Party effects packet
+    -- Party member buffs packet
 	elseif (e.id == 0x76) then
-        for x = 0, 4, 1 do
+        for x = 0, 5, 1 do 
 			local server_id = struct.unpack('I', e.data_modified, x * 0x30 + 0x04 + 1);
-
             party_buffs.party_member_data:each( function (pmd)
                 if( pmd.id == server_id) then
                     pmd.statuses = { };
