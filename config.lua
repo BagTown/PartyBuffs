@@ -162,10 +162,13 @@ config.render_editor = function(settings, party_member_data, subrange, subcolor,
                 imgui.EndGroup();
                 imgui.BeginGroup();
                     imgui.TextColored({ 1.0, 0.65, 0.26, 1.0 }, 'Other Settings');
-                    imgui.BeginChild('other_settings', { 0, 120, }, true); 
+                    imgui.BeginChild('other_settings', { 0, 140, }, true); 
 
+                        imgui.Checkbox('Show Self Statuses', settings.show_self);
+                        imgui.ShowHelp('Toggles if your own buff/debuff icons and distance are displayed or not.')
                         imgui.Checkbox('Show Exclusions', settings.show_excluded);
                         imgui.ShowHelp('Toggles if excluded icons are displayed or not.');
+
                         local pos = { settings.x[1], settings.y[1] } 
                         if (imgui.InputInt2('Position', pos)) then
                             settings.x[1] = pos[1];
