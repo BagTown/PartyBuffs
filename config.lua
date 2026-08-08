@@ -78,7 +78,7 @@ config.render_editor = function(settings, party_member_data, subrange, subcolor,
             if (imgui.BeginTabItem('Main Settings', nil)) then
                 imgui.BeginGroup();
                     imgui.TextColored({ 1.0, 0.65, 0.26, 1.0 }, 'Status Icons');
-                    imgui.BeginChild('status_icons', { 0, 140, }, true);  
+                    imgui.BeginChild('status_icons', { 0, 140, }, child_border);  
 
                         imgui.Checkbox('Visible', settings.status_visible);
                         imgui.ShowHelp('Toggles if status icons are displayed or not.');
@@ -101,7 +101,7 @@ config.render_editor = function(settings, party_member_data, subrange, subcolor,
                 imgui.EndGroup();
                 imgui.BeginGroup();
                     imgui.TextColored({ 1.0, 0.65, 0.26, 1.0 }, 'Distance Text');
-                    imgui.BeginChild('distance_text', { 0, 210, }, true); 
+                    imgui.BeginChild('distance_text', { 0, 210, }, child_border); 
 
                         local need_font_update = false;
 
@@ -162,7 +162,7 @@ config.render_editor = function(settings, party_member_data, subrange, subcolor,
                 imgui.EndGroup();
                 imgui.BeginGroup();
                     imgui.TextColored({ 1.0, 0.65, 0.26, 1.0 }, 'Other Settings');
-                    imgui.BeginChild('other_settings', { 0, 140, }, true); 
+                    imgui.BeginChild('other_settings', { 0, 140, }, child_border); 
 
                         imgui.Checkbox('Show Self Statuses', settings.show_self);
                         imgui.ShowHelp('Toggles if your own buff/debuff icons and distance are displayed or not.')
