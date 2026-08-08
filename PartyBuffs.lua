@@ -26,7 +26,7 @@
 
 addon.name      = 'PartyBuffs';
 addon.author    = 'Bag_Town';
-addon.version   = '1.5';
+addon.version   = '1.6';
 addon.desc      = 'Displays a distance and list of icons of current status buffs and ailments next to the party list. Based on Project Tako\'s version.';
 addon.link      = 'https://ashitaxi.com/';
 
